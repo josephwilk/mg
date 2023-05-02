@@ -6,11 +6,15 @@ void ofApp::setup(){
   grabber.setup(1280,720);
   tracker.setup();
 
+  gui.setup();
+  gui.add(maxEyeRange.set("maxEyeRange", 23.6, 0, 100));
+
+
   ofEnableAlphaBlending();
-    for ( int i = 0; i < num; i++ ) {
-      ax.push_back(0.0);
-      ay.push_back(0.0);
-    }
+  for ( int i = 0; i < num; i++ ) {
+    ax.push_back(0.0);
+    ay.push_back(0.0);
+  }
 
   ofSetDataPathRoot(ofFile(__BASE_FILE__).getEnclosingDirectory()+"../../model/");
 
@@ -50,20 +54,20 @@ void ofApp::setup(){
 
   int i =0;
   for (int y = 0; y < ofGetHeight() / eyeHeight + 0.0; y++) {
-      for (int x = 0; x < ofGetWidth() / eyeWidth + 0.0; x++) {
-        jitter.push_back(ofRandom(-1.1, 1.1));
-        jitterGradient.push_back(ofRandom(5, 35.0));
-      }
+    for (int x = 0; x < ofGetWidth() / eyeWidth + 0.0; x++) {
+      jitter.push_back(ofRandom(-1.1, 1.1));
+      jitterGradient.push_back(ofRandom(5, 35.0));
     }
+  }
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
   grabber.update();
 
-    if(grabber.isFrameNew()){
-        tracker.update(grabber);
-    }
+  if(grabber.isFrameNew()){
+    tracker.update(grabber);
+  }
   ofSeedRandom();
   for (int i = 1; i < num; i++ ) {
     ax[i - 1] = ax[i];
@@ -71,54 +75,58 @@ void ofApp::update(){
   }
   float r1 = ofRandomf() * range;
   float r2 = ofRandomf() * range;
-   // Put a new value at the end of the array
+  // Put a new value at the end of the array
   ax[num - 1] += r1 ;
-   ay[num - 1] += r2 ;
+  ay[num - 1] += r2 ;
 
-   // Constrain all points
-   ax[num - 1] = ofClamp(ax[num - 1], -10,10);
-   ay[num - 1] = ofClamp(ay[num - 1], -10,10);
+  // Constrain all points
+  ax[num - 1] = ofClamp(ax[num - 1], -5,5);
+  ay[num - 1] = ofClamp(ay[num - 1], -5,5);
 
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
   ofBackground(0);
-  //range = 0.3;
-  //ofScale(0.5)
+  ofPushView();
+
+  float factor = 0.5;
+
+  ofScale(factor);
 
   int eyeWidth =75;
   int eyeHeight=75;
   glm::vec2 focusTarget = glm::vec2(mouseX, mouseY);
-  focusTarget = glm::vec2(noseX, noseY);
+  //focusTarget = glm::vec2(noseX, noseY);
 
-  for (int y = 0; y < 23; y++) {
-    for (int x = 0; x < 36; x++) {
+  for (int y = 0; y < 23*2; y++) {
+    for (int x = 0; x < 36*2; x++) {
       int eyeX = eyeWidth * x;
       int eyeY = eyeHeight * y;
+      int selectedEye = ofNoise(x,y) * eyes.size();
 
-      int selectedEye = ofRandom(1.0) * eyes.size();
-      selectedEye = ofNoise(x,y) * eyes.size();
-
-      //selectedEye = x % eyes.size();
       glm::vec2 pupilTarget = pupilCenters[selectedEye % pupilCenters.size()];
       pupilTarget.x += eyeX;
       pupilTarget.y += eyeY;
 
       float distance = glm::distance(focusTarget,pupilTarget);
+
+//      if(distance > 6359){
+//        cout << "distance:" << distance << " ";
+//      }
       glm::vec2 focus = focusTarget - pupilTarget;
       focus = glm::normalize(focus);
 
-      float mappedDistance = ofMap(distance, 0, 900, minEyeRange, 8.1 - (jitter[selectedEye]));
+//      float maxScreenDistance = 6359.0;
+      float maxScreenDistance = 5000.0;
+      float mappedDistance = ofMap(distance, 0.0, maxScreenDistance, 0.0, maxEyeRange - (jitter[selectedEye]));
       //focus = focus*mappedDistance;
-      focus.x = mappedDistance * 1.02 *  focus.x;
+      focus.x = (mappedDistance * 1.01) * focus.x;
       focus.y = mappedDistance * focus.y;
 
       glm::vec2 pupilPos = pupilTarget + focus;
       pupilPos.x += ax[num - (x+y % num)];
       pupilPos.y += ay[num - (x+y % num) ];
-
-      //  cout << ax[num - 1];
 
       int offWhite = jitterGradient[selectedEye] * 2;
       ofSetColor(242 - offWhite, 242 - offWhite, 240 - offWhite);
@@ -126,12 +134,12 @@ void ofApp::draw(){
 
       ofDrawRectangle(eyeX, eyeY, 75, 76);
 
-       if(ofNoise(x,y) > 0.5){
-         backgroundEye2.draw(eyeX, eyeY);
-       }
-       else{
-         backgroundEye1.draw(eyeX, eyeY);
-       }
+      if(ofNoise(x,y) > 0.5){
+        backgroundEye2.draw(eyeX, eyeY);
+      }
+      else{
+        backgroundEye1.draw(eyeX, eyeY);
+      }
 
       pupils[selectedEye].draw( pupilPos.x - (eyeWidth / 2),  pupilPos.y - (eyeHeight / 2));
       eyes[selectedEye].draw(eyeX,eyeY);
@@ -139,6 +147,8 @@ void ofApp::draw(){
   }
 
   //grabber.draw(0, 0);
+
+  ofPopView();
 
   for(auto face : tracker.getInstances()){
     //ofPolyline leftEye = face.getLandmarks().getImageFeature(ofxFaceTracker2Landmarks::LEFT_EYE);
@@ -151,18 +161,20 @@ void ofApp::draw(){
 
     noseX = (p.x/1280) * ofGetWidth();
     noseY = (p.y/720)  * ofGetHeight();
-    ofDrawCircle(noseX, noseY, 10);
+    //ofDrawCircle(noseX, noseY, 10);
 
-
-
-    }
-    ofDrawBitmapStringHighlight("Tracker fps: "+ofToString(tracker.getThreadFps()), 10, 20);
-
+  }
+  if( !bHide ){
+    gui.draw();
+  }
+  //ofDrawBitmapStringHighlight("Tracker fps: "+ofToString(tracker.getThreadFps()), 10, 20);
 }
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-
+  if(key == 'g'){
+    bHide=!bHide;
+  }
 }
 
 //--------------------------------------------------------------

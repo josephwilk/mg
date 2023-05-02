@@ -3,7 +3,7 @@
 #include "ofMain.h"
 #include "ofxCv.h"
 #include "ofxFaceTracker2.h"
-
+#include "ofxGui.h"
 
 class ofApp : public ofBaseApp{
 
@@ -24,15 +24,18 @@ class ofApp : public ofBaseApp{
     void dragEvent(ofDragInfo dragInfo);
     void gotMessage(ofMessage msg);
 
+  ofxPanel gui;
 
   ofVideoGrabber grabber;
-
   ofxFaceTracker2 tracker;
 
   std::deque<double> oldTracker;
   std::deque<double> newTracker;
 
+  ofParameter<int> maxRange;
+  ofParameter<float> maxEyeRange;
 
+  bool bHide;
   //let video;
   //let poseNet;
   int poseDistance = 0;
@@ -45,7 +48,7 @@ class ofApp : public ofBaseApp{
   int rawX=0;
   int rawY=0;
   //var gui;
-  float maxEyeRange=8.1;
+
   float minEyeRange=0.5;
   bool videoOn = true;
 
@@ -70,7 +73,7 @@ class ofApp : public ofBaseApp{
   bool guiOn = true;
 
   int num = 100;
-  float range = 0.1;
+  float range = 0.2;
 
   vector<float> ax;
   vector<float> ay;
